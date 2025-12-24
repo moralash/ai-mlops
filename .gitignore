@@ -1,0 +1,45 @@
+# General
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+forkenv/
+.env
+.env.*
+!.env.example
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+build/
+dist/
+
+# Node / JS
+node_modules/
+npm-debug.log
+yarn-error.log
+.next/
+out/
+.nuxt/
+.vuepress/dist
+.cache/
+.parcel-cache
+
