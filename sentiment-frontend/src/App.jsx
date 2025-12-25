@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import Header from './components/Header';
-import StatsDashboard from './components/StatsDashboard';
-import AnalysisInput from './components/AnalysisInput';
-import ResultsDisplay from './components/ResultsDisplay';
-import HistoryList from './components/HistoryList';
-import AnalyticsChart from './components/AnalyticsChart';
-import BatchAnalysis from './components/BatchAnalysis';
+
+// Components
+import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 import Toast from './components/Toast';
+
+// Pages
+import {
+  HomePage,
+  DashboardPage,
+  AnalyzePage,
+  AnalyticsPage,
+  SettingsPage,
+  AboutPage
+} from './pages';
 
 // API Configuration
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -23,8 +31,19 @@ function App() {
     return localStorage.getItem('theme') || 'light';
   });
   const [toast, setToast] = useState(null);
-  const [activeTab, setActiveTab] = useState('analyze');
   const [isConnected, setIsConnected] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const location = useLocation();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
+
+  const locationUsedVar = location; // prevent unused var warning if location was only used here
+
 
   // Apply theme
   useEffect(() => {
@@ -87,12 +106,14 @@ function App() {
       fetchAnalytics();
 
       showToast(`Analysis complete: ${response.data.sentiment.toUpperCase()}`, 'success');
+      return response.data;
     } catch (error) {
       console.error("Analysis failed:", error);
       showToast(
         error.response?.data?.detail || "Analysis failed. Ensure backend is running.",
         'error'
       );
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -160,89 +181,105 @@ function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => !prev);
+  };
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileOpen(prev => !prev);
+  };
+
+  // Refresh data
+  const handleRefresh = () => {
+    fetchStats();
+    fetchAnalytics();
+    showToast('Data refreshed', 'success');
+  };
+
   return (
     <>
       {/* Animated Background */}
       <div className="animated-bg" />
 
-      {/* Main App Container */}
-      <div className="min-h-screen relative">
-        {/* Header */}
-        <Header
+      {/* App Layout */}
+      <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* Sidebar */}
+        <Sidebar
           theme={theme}
           onThemeToggle={toggleTheme}
-          onExport={handleExport}
           isConnected={isConnected}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+          isMobileOpen={isMobileOpen}
+          onMobileToggle={toggleMobileMenu}
         />
 
         {/* Main Content */}
-        <main className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
-          {/* Page Title */}
-          <div className="text-center" style={{ marginBottom: '3rem' }}>
-            <h1 className="heading-1" style={{ marginBottom: '0.5rem' }}>
-              SentimentAI
-            </h1>
-            <p className="text-body">
-              Real-time sentiment analysis powered by machine learning
-            </p>
-          </div>
+        <div className="app-main">
+          <main className="app-content">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <DashboardPage
+                    stats={stats}
+                    history={history}
+                    onAnalyze={handleAnalyze}
+                    loading={loading}
+                  />
+                }
+              />
+              <Route
+                path="/analyze"
+                element={
+                  <AnalyzePage
+                    onAnalyze={handleAnalyze}
+                    onBatchAnalyze={handleBatchAnalyze}
+                    loading={loading}
+                    result={result}
+                    history={history}
+                  />
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <AnalyticsPage
+                    analytics={analytics}
+                    onRefresh={handleRefresh}
+                    onExport={handleExport}
+                  />
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <SettingsPage
+                    theme={theme}
+                    onThemeToggle={toggleTheme}
+                  />
+                }
+              />
+              <Route path="/about" element={<AboutPage />} />
+            </Routes>
+          </main>
 
-          {/* Stats Dashboard */}
-          <StatsDashboard stats={stats} />
-
-          {/* Tab Navigation */}
-          <div className="flex justify-center gap-4" style={{ marginBottom: '2rem' }}>
-            <button
-              className={`btn ${activeTab === 'analyze' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('analyze')}
-            >
-              Single Analysis
-            </button>
-            <button
-              className={`btn ${activeTab === 'batch' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('batch')}
-            >
-              Batch Analysis
-            </button>
-            <button
-              className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setActiveTab('analytics')}
-            >
-              Analytics
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'analyze' && (
-            <div className="animate-fade-in">
-              <AnalysisInput onAnalyze={handleAnalyze} loading={loading} />
-              {result && <ResultsDisplay result={result} />}
-              <HistoryList history={history} />
-            </div>
-          )}
-
-          {activeTab === 'batch' && (
-            <div className="animate-fade-in">
-              <BatchAnalysis onAnalyze={handleBatchAnalyze} loading={loading} />
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div className="animate-fade-in">
-              <AnalyticsChart analytics={analytics} />
-            </div>
-          )}
-        </main>
-
-        {/* Toast Notification */}
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
+          {/* Footer */}
+          <Footer />
+        </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 }

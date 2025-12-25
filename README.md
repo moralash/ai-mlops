@@ -2,12 +2,12 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9+-green.svg)
 ![React](https://img.shields.io/badge/react-19-61dafb.svg)
 ![License](https://img.shields.io/badge/license-MIT-purple.svg)
 
-**A production-grade, real-time sentiment analysis platform powered by machine learning**
+**A production-grade, real-time sentiment analysis platform with a stunning premium SaaS UI**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Development](#-development)
 
@@ -30,12 +30,16 @@
 - **Export Functionality** (JSON/CSV)
 - **RESTful API** with versioning (`/api/v1/`)
 
-### 🎨 Modern UI/UX
-- **Glassmorphism Design** with smooth animations
-- **Dark/Light Theme Toggle** with persistence
-- **Real-time Connection Status** indicator
-- **Analytics Dashboard** with trend charts
-- **Responsive Design** for all devices
+### 🎨 Premium SaaS UI
+- **Dynamic Typing Effect** - Animated hero text using react-type-animation
+- **Framer Motion Animations** - Smooth page transitions and scroll effects
+- **Mesh Gradient Backgrounds** - Beautiful animated color orbs
+- **Glowing Buttons** - Shimmer effects and neon glow on hover
+- **Glassmorphism Design** - Frosted glass cards and sidebar
+- **Premium Typography** - Syne (display) + Outfit (body) fonts
+- **Multi-Page Dashboard** - Home, Analyze, Analytics, Settings, About
+- **Collapsible Sidebar** - Modern navigation with active states
+- **Dark/Light Theme** - Stunning themes with smooth transitions
 
 ### 🔧 Production Ready
 - **Supabase PostgreSQL** integration
@@ -46,13 +50,34 @@
 
 ---
 
+## 🖥️ UI Preview
+
+### Hero Section
+- Large **Syne** font headings with gradient text
+- Typing animation: *"Understand the Emotions / Feelings / Sentiments..."*
+- Browser-style demo card with live sentiment preview
+- Glowing CTA buttons with shimmer effects
+
+### Dashboard
+- Quick stats overview with animated counters
+- Recent activity feed
+- Quick analysis form
+
+### Features
+- 6 feature cards with gradient icons
+- Hover effects with glow and lift
+- Trusted by section with tech logos
+
+---
+
 ## 🏗️ Architecture
 
 ```mermaid
 graph TB
     subgraph Frontend["Frontend (React + Vite)"]
-        UI[Modern UI Components]
-        State[App State Management]
+        UI[Premium SaaS UI]
+        Router[React Router]
+        Motion[Framer Motion]
         Charts[Analytics Charts]
     end
     
@@ -94,10 +119,23 @@ ai-mlops/
 │   └── .env.example
 │
 └── sentiment-frontend/
+    ├── public/
+    │   ├── logo.svg        # App logo
+    │   └── favicon.svg     # Browser favicon
     ├── src/
-    │   ├── components/     # React components
+    │   ├── components/     # Reusable UI components
+    │   │   ├── Sidebar.jsx
+    │   │   ├── Footer.jsx
+    │   │   └── ...
+    │   ├── pages/          # Route pages
+    │   │   ├── HomePage.jsx
+    │   │   ├── DashboardPage.jsx
+    │   │   ├── AnalyzePage.jsx
+    │   │   ├── AnalyticsPage.jsx
+    │   │   ├── SettingsPage.jsx
+    │   │   └── AboutPage.jsx
     │   ├── App.jsx
-    │   └── index.css       # Design system
+    │   └── index.css       # Premium design system
     ├── package.json
     └── .env.example
 ```
@@ -135,7 +173,7 @@ python -m ml.generate_data
 python -m ml.train
 
 # Start the server
-python -m uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### 2. Frontend Setup
@@ -159,6 +197,19 @@ npm run dev
 - **Frontend**: http://localhost:5173
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/api/v1/health
+
+---
+
+## 📦 Frontend Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| react | 19.x | UI Framework |
+| react-router-dom | 7.x | Client-side routing |
+| framer-motion | 11.x | Animations |
+| react-type-animation | 3.x | Typing effect |
+| axios | 1.x | HTTP client |
+| lucide-react | 0.x | Icons |
 
 ---
 
@@ -250,104 +301,28 @@ Available models:
 - `random_forest` (higher accuracy)
 - `svm` (best for small datasets)
 
-### Training Output
-
-```
-==================================================
-SentimentAI Model Training Pipeline
-==================================================
-Loaded 5000 samples
-Train/Test Split: 4000/1000
-
-Vectorizing text...
-Vocabulary size: 3456
-
-Training logistic_regression model...
-CV Accuracy: 0.9523 (+/- 0.0124)
-
-==============================
-METRICS
-==============================
-Accuracy:  0.9580
-Precision: 0.9582
-Recall:    0.9580
-F1 Score:  0.9578
-```
-
 ---
 
-## 🗄️ Database Configuration
+## 🎨 Design System
 
-### Supabase Setup
+### Typography
+| Font | Usage |
+|------|-------|
+| **Syne** | Display headings |
+| **Outfit** | Body text |
+| **Fira Code** | Code snippets |
 
-1. Create a new Supabase project
-2. Get your database URL from Project Settings > Database
-3. Update `.env`:
+### Colors
+- **Primary**: Purple gradient (#a855f7 → #ec4899)
+- **Accent Cyan**: #00f5d4 (neon glow)
+- **Success**: #10b981
+- **Danger**: #f43f5e
 
-```env
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
-```
-
-### Tables
-
-The following tables are created automatically:
-
-- `predictions` - Stores all sentiment analysis results
-- `model_versions` - Tracks ML model versions and metrics
-- `analytics_snapshots` - Daily aggregated statistics
-
----
-
-## 🎨 UI Components
-
-### Theme Toggle
-Switch between light and dark modes with persistence.
-
-### Analytics Dashboard
-- **Trend Chart**: 7-day sentiment trends
-- **Pie Chart**: Overall sentiment distribution
-- **Word Cloud**: Top words by sentiment
-- **Confidence Histogram**: Score distribution
-
-### Batch Analysis
-- Drag & drop CSV upload
-- Multi-line text input
-- Results export to CSV
-
----
-
-## 🧪 Development
-
-### Backend Development
-
-```bash
-# Run with auto-reload
-uvicorn app.main:app --reload
-
-# Run tests
-pytest tests/ -v
-
-# Type checking
-mypy app/
-```
-
-### Frontend Development
-
-```bash
-# Development server
-npm run dev
-
-# Lint
-npm run lint
-
-# Build for production
-npm run build
-```
-
-### Code Style
-
-- **Backend**: Black, isort, flake8
-- **Frontend**: ESLint, Prettier
+### Effects
+- Glassmorphism with backdrop blur
+- Mesh gradient backgrounds
+- Shimmer button animations
+- Floating orb animations
 
 ---
 
@@ -381,4 +356,5 @@ MIT License - feel free to use this project for learning and production.
 
 <div align="center">
   <p>Built with ❤️ using FastAPI, React, and Scikit-learn</p>
+  <p><sub>Premium SaaS UI inspired by Linear & Vercel</sub></p>
 </div>
