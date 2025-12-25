@@ -1,87 +1,286 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Sparkles } from 'lucide-react';
-import StatsDashboard from './components/StatsDashboard';
-import AnalysisInput from './components/AnalysisInput';
-import ResultsDisplay from './components/ResultsDisplay';
-import HistoryList from './components/HistoryList';
 
-const API_URL = 'http://localhost:8000/api';
+// Components
+import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
+import Toast from './components/Toast';
+
+// Pages
+import {
+  HomePage,
+  DashboardPage,
+  AnalyzePage,
+  AnalyticsPage,
+  SettingsPage,
+  AboutPage
+} from './pages';
+
+// API Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 function App() {
+  // State
   const [stats, setStats] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+  const [toast, setToast] = useState(null);
+  const [isConnected, setIsConnected] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const fetchStats = async () => {
+  const location = useLocation();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
+
+  const locationUsedVar = location; // prevent unused var warning if location was only used here
+
+
+  // Apply theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/stats`);
       setStats({
         total_predictions: response.data.total_predictions,
-        sentiment_distribution: response.data.sentiment_distribution
+        sentiment_distribution: response.data.sentiment_distribution,
+        avg_confidence: response.data.avg_confidence
       });
       setHistory(response.data.recent_predictions);
+      setIsConnected(true);
     } catch (error) {
       console.error("Error fetching stats:", error);
+      setIsConnected(false);
     }
-  };
-
-  useEffect(() => {
-    fetchStats();
   }, []);
 
+  // Fetch analytics
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/stats/analytics?days=7`);
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    }
+  }, []);
+
+  // Initial data load
+  useEffect(() => {
+    fetchStats();
+    fetchAnalytics();
+  }, [fetchStats, fetchAnalytics]);
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Handle single analysis
   const handleAnalyze = async (text) => {
     setLoading(true);
     setResult(null);
+
     try {
-      const response = await axios.post(`${API_URL}/predict`, { text });
-      // Artificial delay for smooth UX
-      setTimeout(() => {
-        setResult(response.data);
-        fetchStats(); // Refresh stats after prediction
-        setLoading(false);
-      }, 600);
+      const response = await axios.post(`${API_URL}/predictions`, { text });
+
+      // Smooth transition delay
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      setResult(response.data);
+      fetchStats();
+      fetchAnalytics();
+
+      showToast(`Analysis complete: ${response.data.sentiment.toUpperCase()}`, 'success');
+      return response.data;
     } catch (error) {
       console.error("Analysis failed:", error);
-      alert("Analysis failed. Ensure backend is running.");
+      showToast(
+        error.response?.data?.detail || "Analysis failed. Ensure backend is running.",
+        'error'
+      );
+      throw error;
+    } finally {
       setLoading(false);
     }
   };
 
+  // Handle batch analysis
+  const handleBatchAnalyze = async (texts) => {
+    setLoading(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/predictions/batch`, { texts });
+
+      fetchStats();
+      fetchAnalytics();
+
+      showToast(`Batch complete: ${response.data.total_processed} texts analyzed`, 'success');
+      return response.data;
+    } catch (error) {
+      console.error("Batch analysis failed:", error);
+      showToast(
+        error.response?.data?.detail || "Batch analysis failed.",
+        'error'
+      );
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle export
+  const handleExport = async (format = 'json') => {
+    try {
+      const response = await axios.get(`${API_URL}/predictions/export`, {
+        params: { format, limit: 1000 },
+        responseType: format === 'csv' ? 'blob' : 'json'
+      });
+
+      if (format === 'csv') {
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sentiment_predictions.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'sentiment_predictions.json';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+
+      showToast(`Exported ${format.toUpperCase()} successfully`, 'success');
+    } catch (error) {
+      console.error("Export failed:", error);
+      showToast("Export failed", 'error');
+    }
+  };
+
+  // Toggle theme
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => !prev);
+  };
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileOpen(prev => !prev);
+  };
+
+  // Refresh data
+  const handleRefresh = () => {
+    fetchStats();
+    fetchAnalytics();
+    showToast('Data refreshed', 'success');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 md:p-12 font-sans text-gray-800">
-      <div className="max-w-4xl mx-auto">
+    <>
+      {/* Animated Background */}
+      <div className="animated-bg" />
 
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-white rounded-full shadow-md animate-bounce-slow">
-              <Sparkles className="w-10 h-10 text-indigo-600" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">
-            Sentiment Analyzer
-          </h1>
-          <p className="text-lg text-gray-600 font-medium">
-            Powered by Machine Learning • Real-time Analysis
-          </p>
+      {/* App Layout */}
+      <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* Sidebar */}
+        <Sidebar
+          theme={theme}
+          onThemeToggle={toggleTheme}
+          isConnected={isConnected}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+          isMobileOpen={isMobileOpen}
+          onMobileToggle={toggleMobileMenu}
+        />
+
+        {/* Main Content */}
+        <div className="app-main">
+          <main className="app-content">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <DashboardPage
+                    stats={stats}
+                    history={history}
+                    onAnalyze={handleAnalyze}
+                    loading={loading}
+                  />
+                }
+              />
+              <Route
+                path="/analyze"
+                element={
+                  <AnalyzePage
+                    onAnalyze={handleAnalyze}
+                    onBatchAnalyze={handleBatchAnalyze}
+                    loading={loading}
+                    result={result}
+                    history={history}
+                  />
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <AnalyticsPage
+                    analytics={analytics}
+                    onRefresh={handleRefresh}
+                    onExport={handleExport}
+                  />
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <SettingsPage
+                    theme={theme}
+                    onThemeToggle={toggleTheme}
+                  />
+                }
+              />
+              <Route path="/about" element={<AboutPage />} />
+            </Routes>
+          </main>
+
+          {/* Footer */}
+          <Footer />
         </div>
-
-        {/* Stats */}
-        <StatsDashboard stats={stats} />
-
-        {/* Main Analysis Section */}
-        <AnalysisInput onAnalyze={handleAnalyze} loading={loading} />
-
-        {/* Results */}
-        {result && <ResultsDisplay result={result} />}
-
-        {/* History */}
-        <HistoryList history={history} />
-
       </div>
-    </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </>
   );
 }
 
